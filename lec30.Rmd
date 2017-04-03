@@ -1,0 +1,232 @@
+---
+title: "STA286 Lecture 30"
+author: "Neil Montgomery"
+date: "Last edited: `r format(Sys.time(), '%Y-%m-%d %H:%M')`"
+output: 
+  beamer_presentation:
+    keep_tex: TRUE
+    incremental: TRUE
+#    df_print: tibble
+    fig_caption: FALSE
+classoption: aspectratio=169
+header-includes:
+- \renewcommand{\le}{\leqslant}
+- \renewcommand{\ge}{\geqslant}
+- \renewcommand\P[1]{P{\left(#1\right)}}
+- \newcommand\F[1]{F_{\tiny{#1}}}
+- \newcommand\f[1]{f_{\tiny{#1}}}
+- \newcommand\p[1]{p_{\tiny{#1}}}
+- \newcommand\M[1]{M_{\tiny{#1}}}
+- \newcommand\V[1]{\text{Var}\!\left(#1\right)}
+- \newcommand\E[1]{E\!\left(#1\right)}
+- \newcommand\N[1]{N_{\tiny{#1}}}
+- \newcommand\ol{\overline}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE,
+                      dev = 'pdf', fig.width=5, fig.asp=0.6, fig.align = 'center')
+options(tibble.width=70, tibble.print_max=5)
+library(tidyverse)
+```
+
+# hypothesis testing
+
+## context: a one-sample $t$ interval example
+
+Let's suppose it is widely known ("everyone knows") that the healthy amount of `Fe` to have in engine oil is, say, "4ppm".
+
+You have $n=30$ haul trucks and you want to assess the health of the fleet of engines.
+
+\pause You take the oil samples and you end up with a sample average of $\ol{x}=7.15$ ppm and a sample standard deviation of $s=8.82$ ppm. 
+
+\pause A 95\% confidence interval for the mean amount of `Fe` in your fleet of engines is easily computed to be:
+$$7.15 \pm t_{29, 0.025} \frac{8.82}{\sqrt{30}}$$
+or [3.86, 10.44].
+
+\pause Your engines are not healthy!
+
+\pause "Hypothesis testing" generally involves using data to make a principled statement about a parameter value.
+
+## hypotheses
+
+Specific statements about parameter values can have practical meanings.
+
+In the `Fe` example, the model used for the population was $X\sim N(\mu,\sigma)$.
+
+Some statements include:
+
+$$\mu = 4 \qquad \mu\ne 4 \qquad \sigma=1 \qquad \sigma^2 > 5$$
+
+\pause To be honest, when only considering one population, this all can look mysterious and arbitrary.
+
+\pause A statement about a parameter value is called a \textit{hypothesis}.
+
+## some more natural hypotheses
+
+Consider two populations $N(\mu_1, \sigma)$ and $N(\mu_2,\sigma)$. The most obviously interesting hypothesis is:
+$$\mu_1=\mu_2$$
+which is the hypothesis that encapsulates "no difference".
+
+\pause Similarly, consider two population Bernoulli($p_1$) and Bernoulli($p_2$). We might also have:
+$$p_1 = p_2$$
+to mean "no difference" 
+
+## null hypothesis and alternative hypothesis
+
+In hypothesis testing we settle on two "hypotheses" concerning parameter values.
+
+The only mathematical requirement is that they don't contain any parameter values in common. 
+
+But in practice it is not so arbitrary.
+
+\pause The null hypothesis, denoted by $H_0$, is almost always the "no effect"/"no difference"/"status quo" parameter value.
+
+\pause For example, $\mu_1 = \mu_2$ and $p_1=p_2$.
+
+\pause The alternative hypothesis, denoted by $H_1$, is usually the complement of $H_0$.
+
+\pause For example, $\mu_1\ne\mu_2$ and $p_1\ne p_2$.
+
+## opinion - The Myth of the "One-Sided" Alternative
+
+Textbooks go on about "choosing" the "appropriate" alternative
+hypothesis, based on little more than the hopes and dreams of the
+experimenter.
+
+\pause Students are sent on wild good chases trying to guess what the textbook author/instructor is "hoping" the alternative is. 
+
+In my \textbf{opinion} this is nonsense. The alternative should almost always be the completment of the null. 
+
+\pause (Note: this is a scientific opinion, and not a mathematical opinion.)
+
+## "classical" hypothesis testing
+
+Our first view of hypothesis testing has a clear goal, which is to use data to make a specific decision: to either \textit{reject $H_0$} or \textit{not reject $H_0$}.
+
+Sometimes \textit{accept} is used as a synonym for \textit{not reject}. The book uses the phrase \textit{fail to reject}, which I've never seen anywhere alse. 
+
+The main thing is to avoid attaching positive or negative connotations to any of these phrases.  
+
+\pause The method in a nutshell: assume $H_0$, collect a sample, and see if the sample contradicts $H_0$.
+
+\pause Motivating example...a pre-fabricated furniture company needs its supplier to provide doors that are 700mm wide. Does the supplier meet this target?
+
+\pause The model for door width will be $N(\mu, \sigma)$, with $\sigma=0.5$ magically known for now.
+
+## classical hypothesis testing---motivating example
+
+The null and alternative hypotheses are:
+\begin{align*}
+H_0 &: \mu=700\\
+H_1 &: \mu\ne 700
+\end{align*}
+
+We plan to gather a sample of size $n=10$.
+
+\pause What \textit{statistic} should be used to make statements about $\mu$. Probably a good idea to use the MLE $\ol{X}$. This is called the \textit{test statistic}.
+
+\pause Suppose (temporarily, as a thought experiment) that in fact $\mu=700$. What is the distrubtion of $\ol{X}$ and which values of $\ol{X}$ would surprise us?
+
+\pause
+$$\ol{X} \sim N\left(700, \frac{0.5}{\sqrt{10}}\right) \quad \text{The \textit{null distribution}}$$
+
+## null distribution $N(700, `r 0.5/sqrt(10)`)$
+
+```{r}
+z <- -350:350/100
+x <- 700 + 0.5/sqrt(10)*z
+
+door_null <- data.frame(x=x, density=dnorm(x, 700, 0.5/sqrt(10)))
+door_null %>% 
+  ggplot(aes(x=x, y=density)) + geom_line()
+```
+
+## classical hypothesis testing - the details
+
+"The values that would surprise us" are defined in advance according to a pre-set probabilty $\alpha$. 
+
+This is called the "size" of the test, or the "level of significance". It is typically something small like: 0.05, 0.1, 0.05, 0.05, 0.01, 0.05, or 0.05.
+
+\pause $\alpha$ is the \textit{probability of rejecting $H_0$ when it is in fact true.}
+
+## classical hypothesis testing - the details
+
+Suppose $\alpha=0.05$. The "area of surprise" in our motivating example is defined as $\ol{X} \le 699.6901$ or $\ol{X} \ge 700.3099$, as in:
+
+```{r, fig.width=4}
+door_null %>% 
+  ggplot(aes(x=x, y=density)) + geom_line() +
+  geom_vline(xintercept = 699.6901) + 
+  geom_vline(xintercept = 700.3099)
+```
+
+## classical hypothesis testing - the details
+
+The "area of surprise" is really called the "rejection region" or "critical region".
+
+We define two types of "error" in classical hypothesis testing:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{c|cc}
+& \multicolumn{2}{c}{Action}\\\hline
+``Truth'' & Reject & Not Reject \\\hline
+$H_0$ True & \onslide<2->{Type I Error} & \\
+$H_0$ False & & \onslide<3->{Type II Error}\\
+\end{tabular}
+\end{table}
+
+\pause\pause\pause 
+$$\alpha = P(\text{Type I Error}) \quad\quad \beta = P(\text{Type II Error})$$
+
+\pause The probability $1-\beta$ of rejecting $H_0$ when it is false is called the "power" of the test.
+
+## example of critical region
+
+In our motivating example, the critical region comes from this expression that uses the null distribution:
+$$\P{-z_{\alpha/2} < \frac{\ol{X} - 700}{0.5/\sqrt{10}} < z_{\alpha/2}} = 1 - \alpha$$
+
+\pause The region is:
+$$\left\{\ol{X} < 700-z_{\alpha/2}\frac{0.5}{\sqrt{10}}\right\} \cup \left\{\ol{X} > 700+z_{\alpha/2}\frac{0.5}{\sqrt{10}}\right\}$$
+```{r}
+LL <- round(700-qnorm(0.995)*0.5/sqrt(10), 3)
+UL <- round(700+qnorm(0.995)*0.5/sqrt(10), 3)
+mu_1 <- 699.7
+```
+
+
+\pause If we set $\alpha = 0.01$, say, this becomes:
+$$\left\{\ol{X} < `r LL`\right\} \cup \left\{\ol{X} > `r UL`\right\}$$
+
+## example power calculation
+
+For an explicit power calculation, one needs a specific alternative.
+
+So, suppose in fact the supplier makes doors that are $\mu_1 = `r mu_1`$mm wide. So in fact $\ol{X} \sim N(`r mu_1`, 0.5/\sqrt(10))$
+
+What is the probability of "rejecting $H_0$"?
+
+\begin{align*}
+P_{\mu_1}(\ol{X} < `r LL`) + P_{\mu_1}(\ol{X} > `r UL`) &= P(Z < `r round((LL - mu_1)/(0.5/sqrt(10)), 3)`) + P(Z > `r round((UL - mu_1)/(0.5/sqrt(10)), 3)`)\\
+&= `r round(pnorm(LL, mu_1, 0.5/sqrt(10)), 3)` + `r round(1-pnorm(UL, mu_1, 0.5/sqrt(10)), 3)`
+\end{align*}
+
+## power in pictures
+
+```{r}
+z <- -450:350/100
+x <- 700 + 0.5/sqrt(10)*z
+
+door_null <- data.frame(x=x, density=dnorm(x, 700, 0.5/sqrt(10)), density_1 = dnorm(x, mu_1, 0.5/sqrt(10)))
+door_null %>% 
+  ggplot(aes(x=x, y=density)) + geom_line() + geom_line(aes(x=x, y=density_1), data=door_null, linetype=2)+
+  geom_vline(xintercept = LL) + 
+  geom_vline(xintercept = UL)
+```
+
+## size, power, and sample size
+
+When the population is $N(\mu, \sigma)$ and the sample is $X_1,\ldots,X_n$ and the hypotheses are $H_0: \mu=\mu_0$ versus $H_1: \mu = \mu_1$, the generic rejection region is, for fixed $\alpha$:
+
+$$\left\{\ol{X} < \mu_0-z_{\alpha/2}\frac{\sigma}{\sqrt{n}}\right\} \cup \left\{\ol{X} > \mu_0+z_{\alpha/2}\frac{\sigma}{\sqrt{n}}\right\}$$
